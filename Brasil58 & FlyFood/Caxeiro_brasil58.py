@@ -1,5 +1,6 @@
 import os
 from Ferramentas import*
+from Edge_Recombination import crossover_erx
 
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
 caminho_arquivo = os.path.join(pasta_atual, "Matriz_Brasil58.tsp")
