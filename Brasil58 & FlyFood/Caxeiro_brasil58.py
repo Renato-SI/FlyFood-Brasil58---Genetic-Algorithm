@@ -1,6 +1,7 @@
 import os
 from Ferramentas import*
 from Edge_Recombination import crossover_erx
+import pygad
 
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
 caminho_arquivo = os.path.join(pasta_atual, "Matriz_Brasil58.tsp")
@@ -28,5 +29,24 @@ objArq.close()
 
 population = inicializaPopulacao(100, qtd_cidades)
 aptidao_atual = calculaAptidao(population, distancias)
-print(population)
-print(aptidao_atual)
+usto_caminhos = custoCaminho(population[0], distancias)
+
+ga_instance = pygad.GA(
+	num_generations=5000,
+	num_parents_mating=20,
+	sol_per_pop=50,
+	num_genes=qtd_cidades,
+	gene_space=list(range(1, qtd_cidades + 1)),
+	allow_duplicate_genes=False,
+
+
+	fitness_func=lambda ga, sol, idx:-custoCaminho(sol, distancias),
+	crossover_type=crossover_erx,
+	mutation_type='swap',
+	mutation_percent_genes=15, 
+	gene_type=int,
+)
+ga_instance.run()
+
+melhor_rota, melhor_fitness, _ = ga_instance.best_solution()
+print(melhor_rota, melhor_fitness)
