@@ -1,27 +1,37 @@
-def custoCaminho(permutacao, dicDistancias):
-	soma = 0
-	for i in range(len(permutacao)-1):
-		a = permutacao[i]
-		b = permutacao[i+1]
-		if (a,b) in dicDistancias:
-			soma += dicDistancias[(a,b)]
-		else:
-			print(f"Erro! ({a},{b}) não existe no dicionario!")
-			exit()
-	soma += dicDistancias[(permutacao[-1],permutacao[0])]
-	return soma
+import numpy as np
 
-def inicializaPopulacao(tamanho, qtdeCidades):
-	import random
-	lista = []
-	for i in range(tamanho):
-		individuo = list(range(1, qtdeCidades+1))
-		random.shuffle(individuo)
-		lista.append(individuo)
-	return lista
+def carregar_matriz_distancias(caminho_arquivo, qtd_cidades):
+    matriz = np.zeros((qtd_cidades, qtd_cidades))
+    with open(caminho_arquivo, "r") as f:
+        for i in range(qtd_cidades - 1):
+            linha = f.readline().split()
+            for j in range(i + 1, qtd_cidades):
+                peso = int(linha.pop(0))
+                matriz[i, j] = peso
+                matriz[j, i] = peso
+    return matriz
 
-def calculaAptidao(populacao, dicDistancias):
-	listaAptidao = []
-	for elem in populacao:
-		listaAptidao.append(custoCaminho(elem, dicDistancias))
-	return listaAptidao
+def avaliar_rota(individual, matriz_dist):
+    ind = np.array(individual)
+    proximos = np.roll(ind, -1)
+    custo_total = np.sum(matriz_dist[ind, proximos])
+    return (custo_total,)
+
+def aplicar_2opt(rota, matriz_dist):
+    best_rota = np.array(rota)
+    n = len(best_rota)
+    improved = True
+    while improved:
+        improved = False
+        for i in range(1, n - 1):
+            for j in range(i + 1, n):
+                a, b = best_rota[i - 1], best_rota[i]
+                c, d = best_rota[j], best_rota[(j + 1) % n]
+                delta = (matriz_dist[a, c] + matriz_dist[b, d]) - (matriz_dist[a, b] + matriz_dist[c, d])
+                if delta < 0:
+                    best_rota[i:j+1] = best_rota[i:j+1][::-1]
+                    improved = True
+                    break
+            if improved:
+                break
+    return best_rota

@@ -1,52 +1,69 @@
 import os
+import random
+import time
+import numpy as np
+from deap import base, creator, tools, algorithms
 from Ferramentas import*
-from Edge_Recombination import crossover_erx
-import pygad
 
+
+QTD_CIDADES = 14
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
-caminho_arquivo = os.path.join(pasta_atual, "Matriz_FlyFood.tsp")
+caminho_matriz = os.path.join(pasta_atual, "Matriz_FlyFood.tsp")
+matriz_distancias = carregar_matriz_distancias(caminho_matriz, QTD_CIDADES)
 
-objArq = open(caminho_arquivo, "r")
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMin)
 
-distancias = {}
-qtd_cidades = 14
+toolbox = base.Toolbox()
 
-for i in range(1, 14): #linhas 1 a 57 pois a 58 nao terá aresta
-	linha = objArq.readline() #le só uma linha do arquivo
-	#transformando a linha em lista de strings:
-	lista = linha.split() #obs: lista de strings (não int)
+toolbox.register("indices", random.sample, range(QTD_CIDADES), QTD_CIDADES)
+toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-	for j in range(i+1, 15): #colunas i+1 a 58
-		if len(lista) > 0:
-			peso = int(lista.pop(0)) #obs: peso int, poderia ser float em outro problema
-		else:
-			print(f"Erro! linha {i} do arquivo não possui elementos suficientes")
-			exit()
-			
-		distancias[(i,j)] = peso
-		distancias[(j,i)] = peso
-objArq.close()
+toolbox.register("evaluate", avaliar_rota, matriz_dist=matriz_distancias)
+toolbox.register("mate", tools.cxOrdered)
+toolbox.register("mutate", tools.mutInversion)
+toolbox.register("select", tools.selTournament, tournsize=3)
 
-population = inicializaPopulacao(100, qtd_cidades)
-aptidao_atual = calculaAptidao(population, distancias)
-custo_caminhos = custoCaminho(population[0], distancias)
+# Execução
+def rodar_ag():
+    populacao = toolbox.population(n=200)
+    hof = tools.HallOfFame(1)
+    
+    stats = tools.Statistics(lambda ind: ind.fitness.values[0])
+    stats.register("min", np.min)
 
-ga_instance = pygad.GA(
-	num_generations=300,
-	num_parents_mating=20,
-	sol_per_pop=50,
-	num_genes=qtd_cidades,
-	gene_space=list(range(1, qtd_cidades + 1)),
-	allow_duplicate_genes=False,
+    CXPB, MUTPB, NGEN = 0.8, 0.25, 1000
 
+    print("Iniciando DEAP com Order Crossover (OX)...")
+    inicio = time.time()
+    
+    populacao, logbook = algorithms.eaSimple(
+        populacao, 
+        toolbox, 
+        cxpb=CXPB, 
+        mutpb=MUTPB, 
+        ngen=NGEN, 
+        stats=stats, 
+        halloffame=hof, 
+        verbose=False
+    )
+    
+    tempo_ga = time.time() - inicio
+    melhor_ga = hof[0]
+    custo_ga = melhor_ga.fitness.values[0]
 
-	fitness_func=lambda ga, sol, idx:-custoCaminho(sol, distancias),
-	crossover_type=crossover_erx,
-	mutation_type='swap',
-	mutation_percent_genes=15, 
-	gene_type=int,
-)
-ga_instance.run()
+    melhor_refinado = aplicar_2opt(melhor_ga, matriz_distancias)
+    custo_final = avaliar_rota(melhor_refinado, matriz_distancias)[0]
 
-melhor_rota, melhor_fitness, _ = ga_instance.best_solution()
-print(melhor_rota, melhor_fitness)
+    # Mapeamento para exibição das cidades
+    rota_exibicao = [cidade + 1 for cidade in melhor_refinado]
+
+    print("\n================ Resultado: Matriz FlyFood ================")
+    print(f"Tempo de Execução (GA): {tempo_ga:.2f} segundos")
+    print(f"Custo de Saída do DEAP (GA Puro): {custo_ga:.0f}")
+    print(f"Custo Final Otimizado (DEAP + 2-Opt): {custo_final:.0f}")
+    print(f"Rota Final (Cidades 1 a 58):\n{rota_exibicao}")
+
+if __name__ == "__main__":
+    rodar_ag()
