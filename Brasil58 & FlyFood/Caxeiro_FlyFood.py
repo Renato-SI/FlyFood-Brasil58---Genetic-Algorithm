@@ -57,7 +57,7 @@ def rodar_ag():
     custo_final = avaliar_rota(melhor_refinado, matriz_distancias)[0]
 
     # Mapeamento para exibição das cidades
-    rota_exibicao = [cidade + 1 for cidade in melhor_refinado]
+    rota_exibicao = [int(cidade) + 1 for cidade in melhor_refinado]
 
     print("\n================ Resultado: Matriz FlyFood ================")
     print(f"Tempo de Execução (GA): {tempo_ga:.2f} segundos")
