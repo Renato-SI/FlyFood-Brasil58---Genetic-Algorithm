@@ -48,7 +48,7 @@ def rodar_ag():
         ngen=NGEN, 
         stats=stats, 
         halloffame=hof, 
-        verbose=False
+        verbose=True
     )
     
     tempo_ga = time.time() - inicio
