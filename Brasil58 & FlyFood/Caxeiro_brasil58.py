@@ -26,7 +26,7 @@ toolbox.register("select", tools.selTournament, tournsize=3)
 
 # Execução
 def rodar_ag():
-    populacao = toolbox.population(n=300)
+    populacao = toolbox.population(n=150)
     hof = tools.HallOfFame(10)
     
     stats = tools.Statistics(lambda ind: ind.fitness.values[0])
@@ -41,7 +41,7 @@ def rodar_ag():
         populacao, 
         toolbox, 
         mu=150,
-        lambda_=600,
+        lambda_=150,
         cxpb=CXPB, 
         mutpb=MUTPB, 
         ngen=NGEN, 

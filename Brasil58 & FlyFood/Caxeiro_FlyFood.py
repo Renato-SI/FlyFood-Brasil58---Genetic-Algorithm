@@ -22,25 +22,27 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("evaluate", avaliar_rota, matriz_dist=matriz_distancias)
 toolbox.register("mate", tools.cxOrdered)
-toolbox.register("mutate", tools.mutInversion)
+toolbox.register("mutate", mutacao_2opt, matriz_dist=matriz_distancias)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
 # Execução
 def rodar_ag():
-    populacao = toolbox.population(n=200)
+    populacao = toolbox.population(n=150)
     hof = tools.HallOfFame(1)
     
     stats = tools.Statistics(lambda ind: ind.fitness.values[0])
     stats.register("min", np.min)
 
-    CXPB, MUTPB, NGEN = 0.8, 0.25, 1000
+    CXPB, MUTPB, NGEN = 0.7, 0.3, 200
 
     print("Iniciando DEAP com Order Crossover (OX)...")
     inicio = time.time()
     
-    populacao, logbook = algorithms.eaSimple(
+    populacao, logbook = algorithms.eaMuPlusLambda(
         populacao, 
         toolbox, 
+        mu=150,
+        lambda_=150,
         cxpb=CXPB, 
         mutpb=MUTPB, 
         ngen=NGEN, 
@@ -53,15 +55,20 @@ def rodar_ag():
     melhor_ga = hof[0]
     custo_ga = melhor_ga.fitness.values[0]
 
-    melhor_refinado = aplicar_2opt(melhor_ga, matriz_distancias)
-    custo_final = avaliar_rota(melhor_refinado, matriz_distancias)[0]
+    melhor_refinado = None
+    custo_final = float('inf')
+    for individuo in hof:
+        rota_refinada = aplicar_2opt(individuo, matriz_distancias)
+        custo_refinado = avaliar_rota(rota_refinada, matriz_distancias)[0]
+        if custo_refinado < custo_final:
+            melhor_refinado = rota_refinada
+            custo_final = custo_refinado
 
     # Mapeamento para exibição das cidades
     rota_exibicao = [int(cidade) + 1 for cidade in melhor_refinado]
 
     print("\n================ Resultado: Matriz FlyFood ================")
     print(f"Tempo de Execução (GA): {tempo_ga:.2f} segundos")
-    print(f"Custo de Saída do DEAP (GA Puro): {custo_ga:.0f}")
     print(f"Custo Final Otimizado (DEAP + 2-Opt): {custo_final:.0f}")
     print(f"Rota Final (Cidades 1 a 58):\n{rota_exibicao}")
 
